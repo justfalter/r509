@@ -7,7 +7,7 @@ module R509
     class Cert
     include R509::IOHelpers
 
-        attr_reader :cert, :san_names, :key
+        attr_reader :cert, :key
 
         # @option opts [String,OpenSSL::X509::Certificate] :cert a cert
         # @option opts [R509::PrivateKey,String] :key optional private key to supply. either an unencrypted PEM/DER string or an R509::PrivateKey object (use the latter if you need password/hardware support)
@@ -98,6 +98,16 @@ module R509
             @cert.issuer
         end
 
+        # Returns the certificate fingerprint with the specified algorithm (default sha1)
+        #
+        # @return [String] hex digest of the certificate
+        def fingerprint(algorithm='sha1')
+            message_digest = R509::MessageDigest.new(algorithm)
+            md = message_digest.digest
+            md.update(@cert.to_der)
+            md.to_s
+        end
+
         # Returns the subject
         #
         # @return [OpenSSL::X509::Name] subject object. Can be parsed as string easily
@@ -113,6 +123,12 @@ module R509
                 false
             end
         end
+
+        # @return [Array] list of SAN names
+        def san_names
+            @san_names || []
+        end
+
 
         # Returns subject component
         #
@@ -158,7 +174,6 @@ module R509
         #
         # @return [Integer] integer value of bit strength
         def bit_strength
-            #cast to int, convert to binary, count size
             if self.rsa?
                 return @cert.public_key.n.num_bits
             elsif self.dsa?
